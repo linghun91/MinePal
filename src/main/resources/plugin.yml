@@ -1,0 +1,21 @@
+name: MinePal
+version: '${project.version}'
+main: cn.i7mc.minepal.MinePal
+api-version: '1.21'
+authors: [Saga]
+description: MinePal plugin for Minecraft
+depend: [MythicMobs]
+
+commands:
+  mp:
+    description: MinePal main command
+    usage: /<command> [pet_name|summon|remove|reload]
+    aliases: [minepal,mp]
+    
+permissions:
+  minepal.use:
+    description: Allows using the MinePal plugin
+    default: true
+  minepal.reload:
+    description: Allows reloading the MinePal plugin
+    default: op 

@@ -1,0 +1,124 @@
+# =====================================================
+# 宠物配置示例：僵尸猎手宠物
+# 
+# 注意：这个文件应放在 plugins/MythicMobs/Mobs/Pets.yml
+# 或其他MythicMobs加载的怪物配置目录中才能生效
+# =====================================================
+
+PetHusk:
+  Type: HUSK
+  Display: '&3宠物僵尸'
+  Health: 100
+  Damage: 5
+  Options:
+    Silent: true
+    PreventOtherDrops: true
+    PreventSunburn: true
+    PreventTransformation: true
+    PreventItemPickup: true
+    Despawn: false
+    PreventRandomEquipment: true
+    PreventTargetingOwner: true
+    KnockbackResistance: 0.2
+    MovementSpeed: 0.3
+    FollowRange: 16
+    PreventRenaming: true
+    PreventLeashing: true
+  AIGoalSelectors:
+    # 清除默认AI
+    - clear
+    
+    # ========== 近战攻击行为的完整配置 ==========
+    # meleeattack路径寻路器的所有可用参数说明：
+    #
+    # speedmodifier/speed/s: (默认值1.0) - 攻击时的移动速度倍率
+    #   - 1.0表示正常速度，数值越大移动越快
+    #   - 控制实体追击目标时的移动速度
+    #   - 推荐范围：0.8-2.0，太高可能造成寻路不稳定
+    #
+    # followUnseen/fu: (默认值false) - 是否追踪看不见的目标
+    #   - true: 即使失去视线也会继续追击目标
+    #   - false: 只有能看见目标时才会追击
+    #   - 设为true可以让宠物更执着地追击逃跑的敌人
+    #
+    # attackReachModifier/attackReach/ar: (默认值4.0，部分版本支持) - 攻击距离修改器
+    #   - 控制实体的近战攻击距离
+    #   - 数值越大，攻击范围越远
+    #   - 建议不要设置得过高，以避免不合理的攻击行为
+    #
+    # priority: (数字，如0、1、2等) - AI优先级
+    #   - 数字越小，优先级越高
+    #   - 0表示最高优先级，会优先执行该AI行为
+    #   - 用于协调多个AI行为之间的执行顺序
+    # =============================================
+    - meleeattack{speed=1.4;followUnseen=true;attackReach=3.5} 0
+    
+    # ========== 跟随主人行为的完整配置 ==========
+    # gotoowner路径寻路器的所有可用参数说明：
+    # 
+    # followrange/fr/r/maxrange: (默认值4.0) - 实体开始向主人移动的距离阈值
+    #   - 当实体与主人的距离超过此值时，将开始移动
+    #   - 较大的值会使宠物更快响应主人的移动
+    #
+    # minrange/mr: (默认值4.0) - 实体停止向主人移动的最小距离
+    #   - 当实体与主人的距离小于此值时，会停止移动
+    #   - 较小的值会使宠物更靠近主人站立
+    #
+    # speed/s: (默认值1.0) - 移动速度倍率
+    #   - 1.0表示正常速度，数值越大移动越快
+    #   - 推荐范围：0.8-2.0，太高可能导致寻路问题
+    #
+    # droptarget/dt: (默认值true) - 是否在跟随主人时清除当前攻击目标
+    #   - true: 跟随主人时会放弃当前目标，优先跟随
+    #   - false: 跟随主人时仍然保持对目标的攻击状态
+    #
+    # teleport/tp: (扩展功能，默认值30.0) - 自动传送阈值距离
+    #   - 当实体与主人距离超过此值时，会直接传送到主人身边
+    #   - 防止宠物因距离过远而跟丢主人
+    #
+    # startfollow/sf: (扩展功能，默认值8.0) - 开始跟随的距离
+    #   - 与followrange功能类似，但为扩展参数
+    #   - 在部分自定义实现中可用
+    #
+    # stopfollow/stf: (扩展功能，默认值6.0) - 停止跟随的距离
+    #   - 与minrange功能类似，但为扩展参数
+    #   - 在部分自定义实现中可用
+    # =============================================
+    - gotoowner{followrange=10;minrange=3;speed=1.5;droptarget:false;teleport=32} 1
+    
+    # 基本生存AI
+    - lookatplayers 2
+  AITargetSelectors:
+    # 清除默认目标
+    - clear
+    # 使用MythicMobs内置的攻击者目标选择器，替代ownertarget
+    - attackers 0
+    # 使用MythicMobs内置的特定实体类型目标选择器
+    - monsters 1
+    # ========== 主人目标选择器的完整配置 ==========
+    # playertarget(玩家目标)目标选择器的所有可用参数说明：
+    # 
+    # TargetingGroup: (字符串，默认无) - 目标选择分组
+    #   - OwnerTarget: 选择主人的目标
+    #   - 该参数用于关联不同AI行为之间的目标选择逻辑
+    #   - 指定为OwnerTarget时，宠物会自动获取主人当前的攻击目标
+    #
+    # Range/range/r: (默认值20.0) - 检测范围
+    #   - 宠物与目标之间的最大距离
+    #   - 只有在该范围内的目标才会被选择
+    #   - 过大的值会导致宠物追击远处的目标
+    #   - 过小的值可能导致宠物无法正确获取目标
+    #
+    # MaxTargets/maxTargets/mt: (默认值1) - 最大目标数量
+    #   - 同时追踪的目标数量上限
+    #   - 通常对于宠物设置为1即可
+    #
+    # Priority: (数字，如0、1、2等) - 目标选择器优先级
+    #   - 数字越小，优先级越高
+    #   - 当有多个目标选择器时，按优先级顺序选择目标
+    # =============================================
+    - playertarget{TargetingGroup=OwnerTarget;Range=20} 2
+  Modules:
+    ThreatTable: true
+  Chasing:
+    MaxRange: 30 

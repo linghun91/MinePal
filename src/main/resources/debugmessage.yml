@@ -1,0 +1,103 @@
+# MinePal 调试消息文件
+# 在这里定义所有用于调试的消息
+# 这些消息只有在config.yml中设置debug: true时才会显示
+
+# 插件生命周期
+plugin:
+  init: "插件初始化"
+  disable: "插件正在禁用"
+  disable-complete: "插件禁用完成"
+  reload-start: "开始重载插件配置"
+  reload-complete: "插件配置重载完成"
+  mythicmobs-reload: "检测到MythicMobs重载事件，正在处理宠物"
+  pet-cleanup-start: "开始清理所有宠物实体"
+  pet-cleanup-complete: "所有宠物实体清理完成"
+
+# 宠物相关调试信息
+pet:
+  summon-start: "开始召唤宠物: %pet_name%，玩家: %player%"
+  summon-complete: "宠物召唤完成: %pet_name%，玩家: %player%，UUID: %uuid%"
+  summon-failed: "宠物召唤失败: %pet_name%，玩家: %player%，原因: %reason%"
+  remove-start: "开始移除宠物: %pet_uuid%，玩家: %player%"
+  remove-complete: "宠物移除完成: %pet_uuid%，玩家: %player%"
+  owner-quit: "玩家离线: %player%，移除宠物: %pet_uuid%"
+  register: "注册宠物: %pet_uuid% 到玩家: %player%"
+  unregister: "注销玩家宠物: %player%，宠物UUID: %pet_uuid%"
+  teleport: "传送宠物: %pet_id% 到位置: %location%"
+  not-found: "找不到宠物: %pet_uuid%"
+  target-search: "寻找宠物目标，宠物: %pet_type%，主人: %owner%，半径: %radius%，找到目标: %found%"
+  set-target-protection: "保护主人，宠物: %pet_id%，主人: %owner%，目标: %target%"
+  target-selection-error: "选择目标时出错: %error%"
+  display-name-update: "更新宠物显示名称，原始名称: %original_name%，格式: %display_format%，新名称: %new_name%，主人: %owner%，宠物类型: %pet_type%"
+  display-name-variables: "使用以下变量替换: %variables%"
+  display-name-error: "更新宠物显示名称时出错: %error%"
+  update-pet-target: "更新宠物目标，宠物UUID: %pet_uuid%，目标类型: %target_type%"
+  remove-all-start: "开始清理所有宠物"
+  remove-by-uuid: "通过UUID清理宠物: %pet_uuid%"
+  potential-pet-found: "发现潜在宠物实体: %entity_type%, UUID: %entity_uuid%"
+  force-cleanup: "强制清理宠物实体: %entity_type%, UUID: %entity_uuid%"
+  clear-registry: "清空宠物注册表"
+  world-unload: "世界卸载事件: %world_name%"
+  world-unload-cleanup: "清理世界:%world%中的宠物实体: %entity_type%, UUID: %entity_uuid%"
+
+# AI系统调试信息
+ai:
+  apply: "应用AI到宠物: %pet_uuid%，主人: %owner_uuid%"
+  remove: "移除宠物AI: %pet_uuid%"
+  update: "更新宠物AI: %pet_uuid%"
+  register-goal: "注册自定义AI目标: %goal_name%，优先级: %priority%"
+  register-behavior: "注册自定义AI行为: %behavior_name%，优先级: %priority%"
+  pathfind-start: "开始寻路，宠物: %pet_uuid%，目标: %target_location%"
+  pathfind-complete: "寻路完成，宠物: %pet_uuid%，路径长度: %path_length%"
+  pathfind-failed: "寻路失败，宠物: %pet_uuid%，原因: %reason%"
+  target-set-success: "设置宠物目标成功，宠物UUID: %pet_uuid%，目标类型: %target_type%，目标UUID: %target_uuid%"
+  target-set-failed: "设置宠物目标失败，宠物UUID: %pet_uuid%，原因: %reason%"
+  target-clear: "清除宠物目标，宠物UUID: %pet_uuid%"
+  mythic-target-set: "设置MythicMobs宠物目标，宠物UUID: %pet_uuid%，目标类型: %target_type%"
+  
+# 实体工具类调试信息
+entity:
+  utils:
+    init: "实体工具类初始化完成"
+  pet-owner: "宠物: %pet_uuid%，主人: %owner%"
+  teleport-attempt: "尝试传送宠物: %pet_uuid%，位置: %location%"
+  teleport-success: "宠物传送成功: %pet_uuid%"
+  teleport-error: "宠物传送失败: %pet_uuid%，原因: %reason%"
+
+# 战斗系统调试信息
+combat:
+  owner-attacked: "主人受到攻击: %owner%，攻击者: %attacker%，伤害值: %damage%"
+  owner-attacking: "主人发起攻击: %owner%，目标: %target%，伤害值: %damage%"
+  record-attack: "记录战斗，攻击者: %attacker%，目标: %target%，伤害值: %damage%"
+  combat-start: "开始战斗状态: %player%"
+  combat-end: "结束战斗状态: %player%"
+  
+# 保护系统调试信息
+protection:
+  prevent-owner-attack: "阻止主人攻击宠物: %owner%，宠物: %pet%"
+  prevent-pet-attack-owner: "阻止宠物攻击主人: %pet%，主人: %owner%"
+  prevent-environment-damage: "保护宠物免受环境伤害: %pet%，伤害类型: %damage_type%"
+  prevent-special-damage: "保护宠物免受特殊伤害: %pet%，伤害类型: %damage_type%"
+  prevent-same-owner-pets: "阻止同主人宠物互相攻击，主人: %owner%"
+  
+# 配置工具类调试信息
+config:
+  reload-start: "开始重载配置: %file%"
+  reload-complete: "配置重载完成: %file%"
+  load-error: "加载配置失败: %file%，原因: %reason%"
+  save-start: "开始保存配置: %file%"
+  save-complete: "配置保存完成: %file%"
+  
+# 消息工具类调试信息
+message:
+  load-error: "加载消息文件失败: %file%，原因: %reason%"
+  message-not-found: "找不到消息: %path%"
+  debug-message-not-found: "找不到调试消息: %path%"
+
+# 伤害系统调试信息
+damage:
+  owner-attacked-pet: "主人[%owner%]攻击了宠物[%pet%]，已阻止"
+  pet-attacked-owner: "宠物[%pet%]攻击了主人[%owner%]，已阻止"
+  same-owner-pets: "同主人[%owner%]的宠物互相攻击，已阻止"
+  special-damage: "宠物[%pet%]受到特殊伤害[%damage_type%]，已阻止"
+  environment-damage: "宠物[%pet%]受到环境伤害[%damage_type%]，已阻止" 

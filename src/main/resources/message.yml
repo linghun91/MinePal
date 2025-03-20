@@ -1,0 +1,62 @@
+# MinePal 消息文件
+messages:
+  plugin:
+    enable: "&a[MinePal] 插件已启用"
+    disable: "&c[MinePal] 插件已禁用"
+    reload: "&a[MinePal] 配置重载完成"
+    no-permission: "&c你没有权限执行此命令"
+    mm-not-found: "&c未检测到MythicMobs插件，部分功能可能无法使用"
+    pet-cleanup: "&e[MinePal] 正在清理所有宠物实体..."
+    pet-cleanup-complete: "&a[MinePal] 宠物实体清理完成"
+  pet:
+    summon-success: "&a成功召唤宠物: %pet_name%"
+    summon-failed: "&c召唤宠物失败: %reason%"
+    remove-success: "&a已移除你的宠物"
+    remove-failed: "&c移除宠物失败: %reason%"
+    limit-reached: "&c已达到最大宠物数量限制"
+    already-has-pet: "&c你已经有一个宠物了，先移除它才能召唤新宠物"
+    no-pet: "&c你当前没有宠物"
+    template-not-found: "&c找不到名为 %template_name% 的宠物模板"
+    death: "&c你的宠物死亡了: %pet_name%"
+    owner-attack-prevented: "&e你不能攻击自己的宠物"
+    # 新增宠物保护和战斗相关消息
+    trigger-protection: "§7宠物正在保护你免受 §c{attacker} §7的攻击"
+    set-target-protection: "§7宠物 §6{pet_id} §7正在攻击 §c{target}"
+    target-search: "§7正在寻找半径 §6{radius} §7内的敌人"
+    target-selection-error: "§c选择目标时出错: {error}"
+    display-name-update: "§7更新宠物名称: §r{new_name}"
+    display-name-error: "§c更新宠物名称时出错: {error}"
+  command:
+    player-only: "&c该命令只能由玩家执行"
+    reload-success: "&a配置重载成功"
+    summon-usage: "&c用法: /mp summon <宠物名>"
+    help: |-
+      &6=== MinePal 帮助 ===
+      &a/mp <宠物名> &7- 召唤指定宠物
+      &a/mp summon <宠物名> &7- 召唤指定宠物
+      &a/mp remove &7- 移除当前宠物
+      &a/mp reload &7- 重载配置
+  error:
+    message-file-not-found: "&c无法获取消息: %path%"
+    message-not-found: "&c消息不存在: %path%"
+    debug-file-not-found: "&c无法获取调试消息: %path%"
+    debug-message-not-found: "&c调试消息不存在: %path%"
+  # EntityUtils相关消息
+  entity:
+    teleport-error: "§c传送宠物时发生错误: {error}"
+    not-found: "§c未找到宠物实体"
+    not-pet: "§c该实体不是宠物"
+    set-target: "§7已将宠物目标设置为 §6{target_type}"
+    set-mythic-target: "§7已将神话宠物目标设置为 §6{target_type}"
+  # DamageUtils相关消息
+  damage:
+    prevent-owner-attack: "§c你不能攻击自己的宠物！"
+    prevent-pet-attack-owner: "§c宠物不能攻击主人！"
+    prevent-special-damage: "§7保护宠物免受 §6{damage_type} §7伤害"
+    prevent-environment-damage: "§7保护宠物免受 §6{damage_type} §7环境伤害"
+    prevent-same-owner-attack: "§7防止同主人宠物互相攻击"
+    prevent-potion-effect: "§7保护宠物免受 §6{effect_type} §7药水效果影响"
+  # AI系统消息
+  ai:
+    target-set-success: "§7宠物 §6{pet_uuid} §7的目标已设置为 §c{target_type}"
+    target-set-failed: "§c设置宠物目标失败: {reason}" 

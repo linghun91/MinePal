@@ -1,0 +1,19 @@
+# MinePal 配置文件
+debug: false
+
+# 插件设置
+settings:
+  enabled: true
+  max-pets: 3
+  save-interval: 300 
+
+# 宠物设置
+pets:
+  # 是否启用名称变量替换
+  name-variables-enabled: true
+  # 显示名称格式
+  display-name-format: "&a{owner_name}的"
+  # 变量替换映射
+  name-variables:
+    "{owner_name}": "主人名称"
+    "{pet_type}": "宠物类型" 
