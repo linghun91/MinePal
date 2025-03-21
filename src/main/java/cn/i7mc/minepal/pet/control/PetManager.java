@@ -13,7 +13,6 @@ import io.lumine.mythic.core.mobs.ActiveMob;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -86,11 +85,6 @@ public class PetManager {
         // 计算安全的召唤位置
         Location spawnLoc = petUtils.getSafeSpawnLocation(player);
         
-        // 输出调试信息，添加宠物名称变量
-        if (plugin.getConfigManager().isDebug()) {
-            plugin.getMessageManager().debug("pet.summon-start", "pet_name", petName);
-        }
-        
         // 使用MythicMobs API召唤宠物
         try {
             // 使用MythicMobs API召唤生物
@@ -120,15 +114,10 @@ public class PetManager {
             player.sendMessage(plugin.getMessageManager().getMessage("pet.summon-success")
                     .replace("%pet_name%", petName));
             
-            // 输出调试信息，添加宠物名称变量
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("pet.summon-complete", "pet_name", petName);
-            }
             return true;
         } catch (Exception e) {
             player.sendMessage(plugin.getMessageManager().getMessage("pet.summon-failed")
                     .replace("%reason%", e.getMessage()));
-            plugin.getLogger().severe("召唤宠物失败: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -167,20 +156,10 @@ public class PetManager {
         try {
             // 使用EntityUtils静态方法
             double radius = plugin.getConfigManager().getConfig("config.yml").getDouble("settings.pet-targeting-radius", 15.0);
-            boolean found = EntityUtils.setOwnerEnemyAsTarget(petEntity, owner, radius);
+            EntityUtils.setOwnerEnemyAsTarget(petEntity, owner, radius);
             
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("pet.target-search", 
-                    "owner", owner.getName(),
-                    "pet_type", petEntity.getType().toString(),
-                    "radius", String.valueOf(radius),
-                    "found", String.valueOf(found));
-            }
         } catch (Exception e) {
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("pet.target-selection-error", "error", e.getMessage());
-                e.printStackTrace();
-            }
+            // 捕获异常但继续执行
         }
     }
     
@@ -262,13 +241,6 @@ public class PetManager {
      * 用于插件重载或服务器关闭时清空所有宠物实体
      */
     public void removeAllPets() {
-        // 检查是否开启调试模式
-        if (plugin.getConfigManager().isDebug()) {
-            plugin.getLogger().info("[DEBUG] 开始清除所有宠物");
-            // 使用标准调试消息
-            plugin.getMessageManager().debug("pet.remove-all-start");
-        }
-        
         // 获取所有已注册的宠物UUID
         Map<UUID, UUID> allPets = petUtils.getAllPets();
         
@@ -284,9 +256,6 @@ public class PetManager {
                 removePet(player);
             } else {
                 // 如果玩家不在线，尝试直接移除宠物实体
-                if (plugin.getConfigManager().isDebug()) {
-                    plugin.getMessageManager().debug("pet.remove-by-uuid", "%pet_uuid%", petUUID.toString());
-                }
                 removePetByUUID(petUUID);
             }
         }
@@ -298,11 +267,6 @@ public class PetManager {
         petUtils.clearAllPets();
         pets.clear();
         petOwnerMap.clear();
-        
-        if (plugin.getConfigManager().isDebug()) {
-            plugin.getMessageManager().debug("pet.clear-registry");
-            plugin.getLogger().info("[DEBUG] 所有宠物已清除");
-        }
     }
     
     /**
@@ -329,9 +293,6 @@ public class PetManager {
                             // 使用MythicMobs API移除实体
                             activeMob.remove();
                         } catch (Exception e) {
-                            if (plugin.getConfigManager().isDebug()) {
-                                plugin.getLogger().warning("移除MythicMobs宠物时出错: " + e.getMessage());
-                            }
                             // 备用方案：直接移除实体
                             entity.remove();
                         }
@@ -364,12 +325,6 @@ public class PetManager {
             for (Entity entity : world.getEntities()) {
                 // 检查是否为宠物的几种方式
                 if (isPotentialPet(entity)) {
-                    if (plugin.getConfigManager().isDebug()) {
-                        plugin.getMessageManager().debug("pet.potential-pet-found", 
-                                new String[]{"%entity_type%", "%entity_uuid%"}, 
-                                new String[]{entity.getType().toString(), entity.getUniqueId().toString()});
-                    }
-                    
                     try {
                         // 尝试从MythicMobs移除
                         AbstractEntity abstractEntity = BukkitAdapter.adapt(entity);
@@ -391,16 +346,8 @@ public class PetManager {
                             // 直接移除实体
                             entity.remove();
                         }
-                        
-                        if (plugin.getConfigManager().isDebug()) {
-                            plugin.getMessageManager().debug("pet.force-cleanup",
-                                    new String[]{"%entity_type%", "%entity_uuid%"},
-                                    new String[]{entity.getType().toString(), entity.getUniqueId().toString()});
-                        }
                     } catch (Exception e) {
-                        if (plugin.getConfigManager().isDebug()) {
-                            plugin.getLogger().warning("清理宠物实体时出错: " + e.getMessage());
-                        }
+                        // 捕获但不处理异常，继续清理其他实体
                     }
                 }
             }
@@ -505,33 +452,13 @@ public class PetManager {
                 // 设置宠物显示名称
                 livingEntity.setCustomName(finalDisplayName);
                 livingEntity.setCustomNameVisible(true);
-                
-                if (plugin.getConfigManager().isDebug()) {
-                    plugin.getMessageManager().debug("pet.display-name-update", 
-                        "original_name", petDisplayName,
-                        "display_format", displayNameFormat,
-                        "new_name", finalDisplayName,
-                        "owner", owner.getName(),
-                        "pet_type", petType);
-                }
             } else {
                 // 如果未启用变量替换，保留原始名称及其颜色代码
                 livingEntity.setCustomName(petDisplayName);
                 livingEntity.setCustomNameVisible(true);
-                
-                if (plugin.getConfigManager().isDebug()) {
-                    plugin.getMessageManager().debug("pet.display-name-update", 
-                        "original_name", petDisplayName,
-                        "new_name", petDisplayName,
-                        "owner", owner.getName(),
-                        "pet_type", petType);
-                }
             }
         } catch (Exception e) {
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("pet.display-name-error", "error", e.getMessage());
-                e.printStackTrace();
-            }
+            // 移除调试日志和相关代码块
         }
     }
 
@@ -630,11 +557,6 @@ public class PetManager {
             if (pet instanceof org.bukkit.entity.Mob) {
                 org.bukkit.entity.Mob mobPet = (org.bukkit.entity.Mob) pet;
                 mobPet.setTarget((LivingEntity) target);
-                
-                // 输出调试信息
-                if (plugin.getConfigManager().isDebug()) {
-                    plugin.getLogger().info("[MinePal] 宠物[" + pet.getUniqueId() + "]目标更新: " + target.getType());
-                }
             }
         }
     }
@@ -672,14 +594,6 @@ public class PetManager {
             // 设置攻击者为宠物的目标
             if (plugin.getAIManager() != null) {
                 plugin.getAIManager().setTarget(petUuid, attacker);
-                
-                // 输出调试信息
-                if (plugin.getConfigManager().isDebug()) {
-                    plugin.getMessageManager().debug("pet.set-target-protection", 
-                        "owner", owner.getName(),
-                        "pet_id", pet.getType().toString(),
-                        "target", attacker.getType().toString());
-                }
             }
         }
     }
@@ -706,13 +620,6 @@ public class PetManager {
         for (Entity pet : pets) {
             if (pet instanceof LivingEntity && plugin.getAIManager() != null) {
                 plugin.getAIManager().setTarget(pet.getUniqueId(), target);
-                
-                // 输出调试信息
-                if (plugin.getConfigManager().isDebug()) {
-                    plugin.getMessageManager().debug("pet.update-pet-target", 
-                        "pet_uuid", pet.getUniqueId().toString(),
-                        "target_type", target.getType().toString());
-                }
             }
         }
     }

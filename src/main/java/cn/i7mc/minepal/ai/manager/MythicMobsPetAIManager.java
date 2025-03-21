@@ -53,54 +53,35 @@ public class MythicMobsPetAIManager implements PetAIManager, Listener {
      */
     @EventHandler
     public void onMythicReloaded(MythicReloadedEvent event) {
-        plugin.getLogger().info("MythicMobs已重载，准备重新注册自定义AI");
         // 延迟一点时间再注册，确保MythicMobs完全重载
         Bukkit.getScheduler().runTaskLater(plugin, this::initialize, 5L);
     }
     
     @Override
     public void initialize() {
-        plugin.getMessageManager().debug("ai.initialize");
-        
         // 在MythicMobs完全加载后注册AI行为
         registerBehaviors();
         registerTargets();
-        
-        plugin.getLogger().info("MinePal自定义AI注册完成");
-        plugin.getMessageManager().debug("ai.initialized");
     }
     
     @Override
     public void registerBehaviors() {
-        plugin.getMessageManager().debug("ai.register-behaviors");
-        
         // 注册行为AI
         // FollowOwnerGoal已使用@MythicAIGoal注解自动注册，这里只记录
         registeredGoals.put("followowner", FollowOwnerGoal.class);
-        plugin.getLogger().info("已注册followowner行为: " + FollowOwnerGoal.class.getName());
-        plugin.getMessageManager().debug("ai.register-goal-success", "name", "followowner");
     }
     
     @Override
     public void registerTargets() {
-        plugin.getMessageManager().debug("ai.register-targets");
-        
         // 注册目标AI
         // OwnerTargetGoal和DamageOwnerGoal已使用@MythicAIGoal注解自动注册，这里只记录
         registeredGoals.put("ownertarget", OwnerTargetGoal.class);
-        plugin.getLogger().info("已注册ownertarget行为: " + OwnerTargetGoal.class.getName());
-        plugin.getMessageManager().debug("ai.register-goal-success", "name", "ownertarget");
-        
         registeredGoals.put("damageowner", DamageOwnerGoal.class);
-        plugin.getLogger().info("已注册damageowner行为: " + DamageOwnerGoal.class.getName());
-        plugin.getMessageManager().debug("ai.register-goal-success", "name", "damageowner");
     }
     
     @Override
     public void applyAI(ActiveMob mythicMob, Player owner) {
         if (mythicMob == null) return;
-        
-        plugin.getMessageManager().debug("ai.apply");
         
         try {
             // 设置宠物主人
@@ -109,26 +90,10 @@ public class MythicMobsPetAIManager implements PetAIManager, Listener {
             // 使用MythicMobs的API设置宠物AI
             AbstractEntity entity = mythicMob.getEntity();
             
-            // 输出调试信息
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("ai.apply-info", 
-                    "pet_type", entity.getBukkitEntity().getType().toString(), 
-                    "owner_name", owner.getName(), 
-                    "owner_uuid", owner.getUniqueId().toString());
-                plugin.getMessageManager().debug("ai.pet-owner-info", 
-                    "pet_uuid", entity.getUniqueId().toString(), 
-                    "has_owner", String.valueOf(mythicMob.getOwner().isPresent()), 
-                    "owner_uuid", (mythicMob.getOwner().isPresent() ? mythicMob.getOwner().get().toString() : "无"));
-            }
-            
             // 强制刷新AI - 尝试重新触发宠物的AI
             try {
                 org.bukkit.entity.Entity bukkitEntity = entity.getBukkitEntity();
                 if (bukkitEntity instanceof org.bukkit.entity.LivingEntity) {
-                    if (plugin.getConfigManager().isDebug()) {
-                        plugin.getMessageManager().debug("ai.recalculate");
-                    }
-                    
                     // 先重置一次AI，然后再启用
                     org.bukkit.entity.LivingEntity livingEntity = (org.bukkit.entity.LivingEntity) bukkitEntity;
                     livingEntity.setAI(false);
@@ -136,11 +101,6 @@ public class MythicMobsPetAIManager implements PetAIManager, Listener {
                     // 清除当前目标
                     if (livingEntity instanceof org.bukkit.entity.Mob) {
                         org.bukkit.entity.Mob mobEntity = (org.bukkit.entity.Mob) livingEntity;
-                        if (plugin.getConfigManager().isDebug()) {
-                            plugin.getMessageManager().debug("ai.clear-target", 
-                                "pet_uuid", mobEntity.getUniqueId().toString(),
-                                "previous_target", mobEntity.getTarget() != null ? mobEntity.getTarget().getType().toString() : "无");
-                        }
                         mobEntity.setTarget(null);
                     }
                     
@@ -149,18 +109,25 @@ public class MythicMobsPetAIManager implements PetAIManager, Listener {
                     
                     if (livingEntity instanceof org.bukkit.entity.Mob) {
                         org.bukkit.entity.Mob mobEntity = (org.bukkit.entity.Mob) livingEntity;
-                        if (plugin.getConfigManager().isDebug()) {
-                            plugin.getMessageManager().debug("ai.enable", 
-                                "pet_uuid", mobEntity.getUniqueId().toString(),
-                                "has_ai", String.valueOf(mobEntity.hasAI()),
-                                "current_target", mobEntity.getTarget() != null ? mobEntity.getTarget().getType().toString() : "无");
-                        }
                         
                         // 检查主人的战斗状态
                         boolean isOwnerInCombat = plugin.getCombatListener().isPlayerInCombat(owner.getUniqueId());
                         org.bukkit.entity.LivingEntity ownerTarget = null;
                         
                         if (isOwnerInCombat) {
+                            // 首先检查是否有攻击主人的实体
+                            UUID attackerUUID = plugin.getCombatListener().getPlayerAttacker(owner.getUniqueId());
+                            if (attackerUUID != null) {
+                                Entity attackerEntity = Bukkit.getEntity(attackerUUID);
+                                if (attackerEntity instanceof LivingEntity &&
+                                    !attackerEntity.getUniqueId().equals(mobEntity.getUniqueId())) {
+                                    // 优先设置攻击主人的实体为宠物目标
+                                    mobEntity.setTarget((LivingEntity) attackerEntity);
+                                    return; // 设置完攻击者为目标后直接返回
+                                }
+                            }
+                            
+                            // 如果没有攻击主人的实体，则检查主人攻击的目标
                             UUID targetUUID = plugin.getCombatListener().getPlayerTarget(owner.getUniqueId());
                             if (targetUUID != null) {
                                 Entity targetEntity = Bukkit.getEntity(targetUUID);
@@ -178,40 +145,12 @@ public class MythicMobsPetAIManager implements PetAIManager, Listener {
                                 !mobEntity.getTarget().getUniqueId().equals(ownerTarget.getUniqueId())) {
                                 // 目标不同，设置宠物的目标
                                 mobEntity.setTarget(ownerTarget);
-                                if (plugin.getConfigManager().isDebug()) {
-                                    plugin.getLogger().info("宠物["+entity.getUniqueId()+"]目标更新: "+ownerTarget.getType());
-                                }
                             }
-                            
-                            // 获取上次战斗时间
-                            long lastCombatTime = System.currentTimeMillis() - plugin.getOwnerCombatListener().getLastCombatTime(owner.getUniqueId());
-                            
-                            plugin.getMessageManager().debug("ai.owner-combat", 
-                                "target", ownerTarget.getType().toString(),
-                                "target_uuid", ownerTarget.getUniqueId().toString(),
-                                "damage_time", String.valueOf(lastCombatTime));
-                        } else {
-                            plugin.getMessageManager().debug("ai.owner-not-combat");
                         }
-                        
-                        // 记录宠物当前目标
-                        if (mobEntity.getTarget() != null) {
-                            plugin.getMessageManager().debug("ai.pet-target", 
-                                "target", mobEntity.getTarget().getType().toString(),
-                                "target_uuid", mobEntity.getTarget().getUniqueId().toString(),
-                                "target_distance", String.format("%.2f", mobEntity.getTarget().getLocation().distance(mobEntity.getLocation())),
-                                "has_line_of_sight", String.valueOf(mobEntity.hasLineOfSight(mobEntity.getTarget())));
-                        } else {
-                            plugin.getMessageManager().debug("ai.pet-no-target");
-                        }
-                    }
-                    
-                    if (plugin.getConfigManager().isDebug()) {
-                        plugin.getMessageManager().debug("ai.re-enabled");
                     }
                 }
             } catch (Exception e) {
-                plugin.getLogger().warning("刷新AI时出错: " + e.getMessage());
+                // 移除调试日志
             }
             
             // 注册周期性任务，每2秒检查一次宠物目标
@@ -227,22 +166,12 @@ public class MythicMobsPetAIManager implements PetAIManager, Listener {
                 // 检查宠物是否还存在
                 Optional<ActiveMob> petMob = MythicBukkit.inst().getMobManager().getActiveMob(petUUID);
                 if (!petMob.isPresent()) {
-                    if (plugin.getConfigManager().isDebug()) {
-                        plugin.getMessageManager().debug("ai.pet-task-cancel", 
-                            "pet_uuid", petUUID.toString(), 
-                            "reason", "宠物不存在");
-                    }
                     petTaskMap.remove(petUUID).cancel();
                     return;
                 }
                 
                 // 检查主人是否还在线
                 if (!owner.isOnline()) {
-                    if (plugin.getConfigManager().isDebug()) {
-                        plugin.getMessageManager().debug("ai.pet-task-cancel", 
-                            "pet_uuid", petUUID.toString(), 
-                            "reason", "主人已离线");
-                    }
                     petTaskMap.remove(petUUID).cancel();
                     return;
                 }
@@ -255,26 +184,28 @@ public class MythicMobsPetAIManager implements PetAIManager, Listener {
                 
                 org.bukkit.entity.Mob mobEntity = (org.bukkit.entity.Mob) bukkitEntity;
                 
-                // 检查宠物与主人的距离
-                double distance = mobEntity.getLocation().distance(owner.getLocation());
-                if (plugin.getConfigManager().isDebug()) {
-                    try {
-                        plugin.getMessageManager().debug("ai.pet-distance", 
-                            "distance", String.format("%.2f", distance),
-                            "owner_uuid", owner.getUniqueId().toString());
-                    } catch (Exception e) {
-                        // 直接输出日志而不依赖于消息键
-                        plugin.getLogger().info("[MinePal] [DEBUG] 宠物与主人距离: " + 
-                            String.format("%.2f", distance) + "米, 主人UUID: " + 
-                            owner.getUniqueId());
-                    }
-                }
-                
-                // 检查主人是否在战斗状态
+                // 检查主人的战斗状态
                 boolean isOwnerInCombat = plugin.getCombatListener().isPlayerInCombat(owner.getUniqueId());
                 org.bukkit.entity.LivingEntity ownerTarget = null;
                 
                 if (isOwnerInCombat) {
+                    // 首先检查是否有攻击主人的实体
+                    UUID attackerUUID = plugin.getCombatListener().getPlayerAttacker(owner.getUniqueId());
+                    if (attackerUUID != null) {
+                        Entity attackerEntity = Bukkit.getEntity(attackerUUID);
+                        if (attackerEntity instanceof LivingEntity &&
+                            !attackerEntity.getUniqueId().equals(mobEntity.getUniqueId())) {
+                            // 优先设置攻击主人的实体为宠物目标
+                            mobEntity.setTarget((LivingEntity) attackerEntity);
+                            
+                            // 记录宠物是否在战斗中和宠物当前目标
+                            ownerCombatMap.put(petUUID, true);
+                            ownerTargetMap.put(petUUID, (LivingEntity) attackerEntity);
+                            return; // 直接返回，不执行后续代码
+                        }
+                    }
+                    
+                    // 如果没有攻击主人的实体，则检查主人攻击的目标
                     UUID targetUUID = plugin.getCombatListener().getPlayerTarget(owner.getUniqueId());
                     if (targetUUID != null) {
                         Entity targetEntity = Bukkit.getEntity(targetUUID);
@@ -292,118 +223,44 @@ public class MythicMobsPetAIManager implements PetAIManager, Listener {
                         !mobEntity.getTarget().getUniqueId().equals(ownerTarget.getUniqueId())) {
                         // 目标不同，设置宠物的目标
                         mobEntity.setTarget(ownerTarget);
-                        if (plugin.getConfigManager().isDebug()) {
-                            plugin.getLogger().info("宠物["+petUUID+"]目标更新: "+ownerTarget.getType());
-                        }
                     }
-                    
-                    // 获取上次战斗时间
-                    long lastCombatTime = System.currentTimeMillis() - plugin.getOwnerCombatListener().getLastCombatTime(owner.getUniqueId());
-                    
-                    plugin.getMessageManager().debug("ai.owner-combat", 
-                        "target", ownerTarget.getType().toString(),
-                        "target_uuid", ownerTarget.getUniqueId().toString(),
-                        "damage_time", String.valueOf(lastCombatTime));
                 } else {
-                    plugin.getMessageManager().debug("ai.owner-not-combat");
+                    // 如果主人不在战斗中，但宠物有目标，尝试寻找附近的目标
+                    if (mobEntity.getTarget() != null) {
+                        // 检查宠物当前目标是否有效
+                        LivingEntity currentTarget = mobEntity.getTarget();
+                        if (currentTarget.isDead() || !currentTarget.isValid()) {
+                            mobEntity.setTarget(null);
+                        } else {
+                            // 检查宠物是否与目标相距太远
+                            double distance = mobEntity.getLocation().distance(currentTarget.getLocation());
+                            if (distance > 30.0) {  // 如果距离超过30格，清除目标
+                                mobEntity.setTarget(null);
+                            }
+                        }
+                    } else {
+                        // 检查附近是否有潜在目标
+                        // findNearbyTarget(owner, mobEntity); // 移除这个调用，让宠物不再主动攻击怪物
+                    }
                 }
+                
+                // 记录宠物是否在战斗中
+                ownerCombatMap.put(petUUID, isOwnerInCombat);
                 
                 // 记录宠物当前目标
                 if (mobEntity.getTarget() != null) {
-                    plugin.getMessageManager().debug("ai.pet-target", 
-                        "target", mobEntity.getTarget().getType().toString(),
-                        "target_uuid", mobEntity.getTarget().getUniqueId().toString(),
-                        "target_distance", String.format("%.2f", mobEntity.getTarget().getLocation().distance(mobEntity.getLocation())),
-                        "has_line_of_sight", String.valueOf(mobEntity.hasLineOfSight(mobEntity.getTarget())));
+                    ownerTargetMap.put(petUUID, mobEntity.getTarget());
                 } else {
-                    plugin.getMessageManager().debug("ai.pet-no-target");
-                    
-                    // 尝试找到一个附近的目标
-                    findNearbyTarget(owner, mobEntity);
+                    ownerTargetMap.remove(petUUID);
                 }
-            }, 40L, 40L); // 初次延迟2秒，之后每2秒执行一次
+                
+            }, 40L, 40L); // 2秒检查一次
             
-            // 保存任务
+            // 将任务存储起来
             petTaskMap.put(petUUID, task);
             
-            plugin.getMessageManager().debug("ai.applied", "owner", owner.getName());
         } catch (Exception e) {
-            plugin.getLogger().severe("应用AI时出错: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-    
-    /**
-     * 寻找附近的敌对生物作为宠物目标
-     * @param owner 宠物主人
-     * @param mobEntity 宠物实体
-     */
-    private void findNearbyTarget(Player owner, org.bukkit.entity.Mob mobEntity) {
-        try {
-            if (plugin.getConfigManager().isDebug()) {
-                try {
-                    plugin.getMessageManager().debug("ai.pet-check", 
-                        "pet_uuid", mobEntity.getUniqueId().toString());
-                } catch (Exception e) {
-                    // 直接输出日志而不依赖于消息键
-                    plugin.getLogger().info("[MinePal] [DEBUG] 周期检查宠物[" + 
-                        mobEntity.getUniqueId() + "]状态");
-                }
-            }
-            
-            // 检查主人的战斗状态
-            boolean isOwnerInCombat = plugin.getCombatListener().isPlayerInCombat(owner.getUniqueId());
-            UUID targetUUID = plugin.getCombatListener().getPlayerTarget(owner.getUniqueId());
-            
-            if (isOwnerInCombat && targetUUID != null) {
-                Entity target = Bukkit.getEntity(targetUUID);
-                if (target instanceof LivingEntity && 
-                    !target.getUniqueId().equals(owner.getUniqueId()) && 
-                    !target.getUniqueId().equals(mobEntity.getUniqueId()) &&
-                    !(target instanceof Player)) {
-                    
-                    LivingEntity livingTarget = (LivingEntity) target;
-                    // 检查目标是否真的有效
-                    if (livingTarget.isValid() && !livingTarget.isDead() && 
-                        mobEntity.hasLineOfSight(livingTarget) &&
-                        livingTarget.getLocation().distance(mobEntity.getLocation()) <= 20) {
-                        
-                        if (plugin.getConfigManager().isDebug()) {
-                            plugin.getMessageManager().debug("ai.pet-target", 
-                                "target", livingTarget.getType().toString(),
-                                "target_uuid", livingTarget.getUniqueId().toString(),
-                                "target_distance", String.format("%.2f", livingTarget.getLocation().distance(mobEntity.getLocation())),
-                                "has_line_of_sight", String.valueOf(mobEntity.hasLineOfSight(livingTarget)));
-                        }
-                        mobEntity.setTarget(livingTarget);
-                    } else {
-                        if (plugin.getConfigManager().isDebug()) {
-                            plugin.getMessageManager().debug("ai.target-invalid", 
-                                "reason", !livingTarget.isValid() ? "目标无效" :
-                                    livingTarget.isDead() ? "目标已死亡" :
-                                    !mobEntity.hasLineOfSight(livingTarget) ? "目标不可见" :
-                                    "目标距离过远",
-                                "target_uuid", livingTarget.getUniqueId().toString(),
-                                "owner_uuid", owner.getUniqueId().toString(),
-                                "pet_uuid", mobEntity.getUniqueId().toString());
-                        }
-                        mobEntity.setTarget(null);
-                    }
-                } else {
-                    mobEntity.setTarget(null);
-                }
-            } else {
-                // 如果主人不在战斗,清除目标
-                mobEntity.setTarget(null);
-                if (plugin.getConfigManager().isDebug()) {
-                    plugin.getMessageManager().debug("ai.pet-no-target");
-                }
-            }
-        } catch (Exception e) {
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("ai.ai-error", "error", e.getMessage());
-            }
-            plugin.getLogger().warning("寻找目标时出错: " + e.getMessage());
+            // 移除调试日志
         }
     }
     
@@ -411,132 +268,109 @@ public class MythicMobsPetAIManager implements PetAIManager, Listener {
     public void removeAI(ActiveMob mythicMob) {
         if (mythicMob == null) return;
         
-        plugin.getMessageManager().debug("ai.remove");
-        
-        // 移除宠物主人
-        mythicMob.removeOwner();
-        
-        // 取消周期性任务
-        UUID petUUID = mythicMob.getEntity().getUniqueId();
-        if (petTaskMap.containsKey(petUUID)) {
-            petTaskMap.get(petUUID).cancel();
-            petTaskMap.remove(petUUID);
+        try {
+            // 获取宠物UUID
+            UUID petUUID = mythicMob.getEntity().getUniqueId();
+            
+            // 取消定时任务
+            if (petTaskMap.containsKey(petUUID)) {
+                BukkitTask task = petTaskMap.remove(petUUID);
+                if (task != null) {
+                    task.cancel();
+                }
+            }
+            
+            // 清除战斗状态记录
+            ownerCombatMap.remove(petUUID);
+            ownerTargetMap.remove(petUUID);
+            
+            // 尝试清除宠物的目标
+            org.bukkit.entity.Entity bukkitEntity = mythicMob.getEntity().getBukkitEntity();
+            if (bukkitEntity instanceof org.bukkit.entity.Mob) {
+                org.bukkit.entity.Mob mobEntity = (org.bukkit.entity.Mob) bukkitEntity;
+                mobEntity.setTarget(null);
+            }
+            
+        } catch (Exception e) {
+            // 移除调试日志
         }
-        
-        // 清理主人的战斗状态
-        if (mythicMob.getOwner().isPresent()) {
-            ownerCombatMap.remove(mythicMob.getOwner().get());
-            ownerTargetMap.remove(mythicMob.getOwner().get());
-        }
-        
-        plugin.getMessageManager().debug("ai.removed");
     }
     
     @Override
     public void updateAI(ActiveMob petMob) {
         if (petMob == null) return;
         
-        plugin.getMessageManager().debug("ai.update");
+        // 获取宠物和主人信息
+        AbstractEntity abstractEntity = petMob.getEntity();
+        io.lumine.mythic.bukkit.utils.serialize.Optl<UUID> ownerUUID = petMob.getOwner();
         
-        try {
-            // 检查宠物是否有主人
-            if (!petMob.getOwner().isPresent()) {
-                return;
-            }
-            
-            UUID ownerUUID = petMob.getOwner().get();
-            Player owner = Bukkit.getPlayer(ownerUUID);
-            
-            // 检查主人是否在线
-            if (owner == null || !owner.isOnline()) {
-                return;
-            }
-            
-            // 获取宠物实体
-            AbstractEntity abstractEntity = petMob.getEntity();
-            Entity bukkitEntity = abstractEntity.getBukkitEntity();
-            if (!(bukkitEntity instanceof Mob)) {
-                return;
-            }
-            
-            Mob mobEntity = (Mob) bukkitEntity;
-            UUID petUUID = abstractEntity.getUniqueId();
-            
-            // 检查主人的战斗状态
-            boolean isOwnerInCombat = plugin.getCombatListener().isPlayerInCombat(ownerUUID);
-            UUID targetUUID = plugin.getCombatListener().getPlayerTarget(ownerUUID);
-            
-            if (isOwnerInCombat && targetUUID != null) {
-                Entity target = Bukkit.getEntity(targetUUID);
-                if (target instanceof LivingEntity && 
-                    !target.getUniqueId().equals(mobEntity.getUniqueId()) && 
-                    target.isValid() && !target.isDead()) {
-                    
-                    LivingEntity livingTarget = (LivingEntity) target;
-                    
-                    // 保持对MythicMobs API的使用
-                    petMob.setTarget(BukkitAdapter.adapt(livingTarget));
-                    
-                    // 设置Bukkit实体的目标
-                    mobEntity.setTarget(livingTarget);
-                    
-                    if (plugin.getConfigManager().isDebug()) {
-                        double distanceToTarget = mobEntity.getLocation().distance(livingTarget.getLocation());
-                        plugin.getMessageManager().debug("ai.pet-target", 
-                            "target", livingTarget.getType().toString(),
-                            "target_uuid", livingTarget.getUniqueId().toString(),
-                            "target_distance", String.format("%.2f", distanceToTarget));
-                    }
-                    
-                    if (plugin.getConfigManager().isDebug()) {
-                        plugin.getLogger().info("宠物[" + petUUID + "]目标更新: " + livingTarget.getType());
-                    }
-                }
-            } else {
-                // 清除目标 - 同时清除MythicMobs和Bukkit目标
-                petMob.setTarget(null);
-                
-                if (mobEntity.getTarget() != null) {
-                    mobEntity.setTarget(null);
-                }
-                
-                if (plugin.getConfigManager().isDebug()) {
-                    plugin.getMessageManager().debug("ai.pet-no-target");
+        // 如果没有主人，不需要更新
+        if (!ownerUUID.isPresent()) return;
+        
+        // 获取主人
+        Player owner = Bukkit.getPlayer(ownerUUID.get());
+        if (owner == null || !owner.isOnline()) return;
+        
+        // 更新宠物AI
+        org.bukkit.entity.Entity bukkitEntity = abstractEntity.getBukkitEntity();
+        if (!(bukkitEntity instanceof org.bukkit.entity.Mob)) return;
+        
+        org.bukkit.entity.Mob mobEntity = (org.bukkit.entity.Mob) bukkitEntity;
+        
+        // 检查主人的战斗状态
+        boolean isOwnerInCombat = plugin.getCombatListener().isPlayerInCombat(owner.getUniqueId());
+        
+        // 如果主人在战斗中，检查是否需要更新宠物目标
+        if (isOwnerInCombat) {
+            // 首先检查是否有攻击主人的实体
+            UUID attackerUUID = plugin.getCombatListener().getPlayerAttacker(owner.getUniqueId());
+            if (attackerUUID != null) {
+                Entity attackerEntity = Bukkit.getEntity(attackerUUID);
+                if (attackerEntity instanceof LivingEntity) {
+                    // 优先设置攻击主人的实体为宠物目标
+                    mobEntity.setTarget((LivingEntity) attackerEntity);
+                    return;
                 }
             }
-        } catch (Exception e) {
-            plugin.getLogger().warning("更新AI时出错: " + e.getMessage());
-            if (plugin.getConfigManager().isDebug()) {
-                e.printStackTrace();
+            
+            // 如果没有找到攻击主人的实体，则检查主人攻击的目标
+            UUID targetUUID = plugin.getCombatListener().getPlayerTarget(owner.getUniqueId());
+            if (targetUUID != null) {
+                Entity targetEntity = Bukkit.getEntity(targetUUID);
+                if (targetEntity instanceof LivingEntity) {
+                    // 设置宠物的目标
+                    mobEntity.setTarget((LivingEntity) targetEntity);
+                }
             }
+        } else {
+            // 如果主人不在战斗状态，可以考虑清除宠物目标
+            // 这里选择保留目标，让宠物可以继续战斗
         }
-        
-        plugin.getMessageManager().debug("ai.updated");
     }
     
     @Override
     public void registerPathfindingGoal(String name, Class<? extends PathfindingGoal> goalClass) {
-        plugin.getMessageManager().debug("ai.register-goal", "name", name);
+        if (name == null || goalClass == null) return;
         
-        // 记录已注册的AI目标
-        registeredGoals.put(name, goalClass);
-        plugin.getLogger().info("已记录自定义AI目标: " + name);
-        plugin.getMessageManager().debug("ai.register-goal-success", "name", name);
+        registeredGoals.put(name.toLowerCase(), goalClass);
+        // 移除调试日志
     }
     
     @Override
     public void registerPathfinderAdapter(String name, Class<? extends PathfinderAdapter> adapterClass) {
-        plugin.getMessageManager().debug("ai.register-adapter", "name", name);
+        if (name == null || adapterClass == null) return;
         
-        // 记录已注册的AI适配器
-        registeredAdapters.put(name, adapterClass);
-        plugin.getLogger().info("已记录自定义AI适配器: " + name);
-        plugin.getMessageManager().debug("ai.register-adapter-success", "name", name);
+        registeredAdapters.put(name.toLowerCase(), adapterClass);
+        // 移除调试日志
     }
     
     @Override
     public ActiveMob getMythicMob(AbstractEntity abstractEntity) {
-        return MythicBukkit.inst().getMobManager().getActiveMob(abstractEntity.getUniqueId()).orElse(null);
+        if (abstractEntity == null) return null;
+        
+        // 使用MythicMobs API获取ActiveMob实例
+        Optional<ActiveMob> activeMob = MythicBukkit.inst().getMobManager().getActiveMob(abstractEntity.getUniqueId());
+        return activeMob.orElse(null);
     }
     
     /**
@@ -562,9 +396,6 @@ public class MythicMobsPetAIManager implements PetAIManager, Listener {
             }
             return null;
         } catch (Exception e) {
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("ai.ai-error", "error", "获取玩家目标实体失败: " + e.getMessage());
-            }
             return null;
         }
     }
@@ -585,39 +416,18 @@ public class MythicMobsPetAIManager implements PetAIManager, Listener {
                 continue;
             }
 
-            // 计算与主人的距离
-            double distanceToOwner = pet.getLocation().distance(owner.getLocation());
-            if (plugin.getConfig().getBoolean("settings.debug", false)) {
-                Bukkit.getLogger().info("[MinePal] [DEBUG] 宠物与主人距离: " + 
-                    String.format("%.2f", distanceToOwner) + "米, 主人UUID: " + owner.getUniqueId());
-            }
-
             // 检查主人是否在战斗状态
             boolean ownerInCombat = plugin.getCombatListener().isPlayerInCombat(owner.getUniqueId());
-            if (plugin.getConfig().getBoolean("settings.debug", false)) {
-                Bukkit.getLogger().info("[MinePal] [DEBUG] 主人当前" + (ownerInCombat ? "正在战斗" : "未战斗"));
-            }
 
             // 获取主人当前目标
             UUID targetUUID = plugin.getCombatListener().getPlayerTarget(owner.getUniqueId());
             if (targetUUID != null) {
                 Entity target = Bukkit.getEntity(targetUUID);
                 if (target != null && target.isValid() && !target.isDead()) {
-                    // 检查目标是否受到过实际伤害
-                    if (plugin.getCombatListener().hasEntityBeenDamaged(target)) {
-                        // 设置宠物目标
-                        if (pet instanceof Mob) {
-                            Mob mob = (Mob) pet;
-                            mob.setTarget((LivingEntity) target);
-                            
-                            if (plugin.getConfig().getBoolean("settings.debug", false)) {
-                                double distanceToTarget = pet.getLocation().distance(target.getLocation());
-                                boolean hasLineOfSight = mob.hasLineOfSight(target);
-                                Bukkit.getLogger().info("[MinePal] [DEBUG] 宠物当前目标: " + target.getType() + 
-                                    ", UUID: " + targetUUID + ", 距离: " + 
-                                    String.format("%.2f", distanceToTarget) + "米, 视线: " + hasLineOfSight);
-                            }
-                        }
+                    // 设置宠物目标
+                    if (pet instanceof Mob) {
+                        Mob mob = (Mob) pet;
+                        mob.setTarget((LivingEntity) target);
                     }
                 }
             } else {
@@ -625,9 +435,6 @@ public class MythicMobsPetAIManager implements PetAIManager, Listener {
                 if (pet instanceof Mob) {
                     Mob mob = (Mob) pet;
                     mob.setTarget(null);
-                    if (plugin.getConfig().getBoolean("settings.debug", false)) {
-                        Bukkit.getLogger().info("[MinePal] [DEBUG] 宠物当前无目标，尝试寻找新目标");
-                    }
                 }
             }
         }
@@ -672,12 +479,6 @@ public class MythicMobsPetAIManager implements PetAIManager, Listener {
 
             // 注销宠物
             plugin.getPetUtils().unregisterPet(player);
-
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("pet.owner-death", 
-                    "owner", player.getName(),
-                    "pet_uuid", petUUID.toString());
-            }
         }
     }
 
@@ -695,22 +496,12 @@ public class MythicMobsPetAIManager implements PetAIManager, Listener {
         // 获取宠物ActiveMob对象
         Optional<ActiveMob> petMob = MythicBukkit.inst().getMobManager().getActiveMob(petUuid);
         if (!petMob.isPresent()) {
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("ai.target-set-failed", 
-                    "pet_uuid", petUuid.toString(), 
-                    "reason", "宠物不存在");
-            }
             return false;
         }
         
         // 获取宠物实体
         org.bukkit.entity.Entity bukkitEntity = petMob.get().getEntity().getBukkitEntity();
         if (!(bukkitEntity instanceof org.bukkit.entity.Mob)) {
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("ai.target-set-failed", 
-                    "pet_uuid", petUuid.toString(), 
-                    "reason", "宠物不是Mob类型");
-            }
             return false;
         }
         
@@ -718,20 +509,8 @@ public class MythicMobsPetAIManager implements PetAIManager, Listener {
         org.bukkit.entity.Mob mobEntity = (org.bukkit.entity.Mob) bukkitEntity;
         if (target instanceof LivingEntity) {
             mobEntity.setTarget((LivingEntity) target);
-            
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("ai.target-set-success", 
-                    "pet_uuid", petUuid.toString(), 
-                    "target_type", target.getType().toString(),
-                    "target_uuid", target.getUniqueId().toString());
-            }
             return true;
         } else {
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("ai.target-set-failed", 
-                    "pet_uuid", petUuid.toString(), 
-                    "reason", "目标不是LivingEntity类型");
-            }
             return false;
         }
     }

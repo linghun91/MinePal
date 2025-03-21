@@ -15,6 +15,8 @@ import cn.i7mc.minepal.utils.EntityUtils;
 import cn.i7mc.minepal.utils.DamageUtils;
 import io.lumine.mythic.bukkit.events.MythicReloadedEvent;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -30,18 +32,19 @@ public final class MinePal extends JavaPlugin implements Listener {
     private PetLifecycleListener lifecycleListener;
     private OwnerCombatListener combatListener;
     private DamageUtils damageUtils;
+    private ConsoleCommandSender console;
 
     @Override
     public void onEnable() {
+        // 获取控制台发送者
+        console = getServer().getConsoleSender();
+        
         // 初始化配置管理器
         configManager = new ConfigManager(this);
         configManager.loadAllConfigs();
         
         // 初始化消息管理器
         messageManager = new MessageManager(this, configManager);
-        
-        // 输出调试信息
-        messageManager.debug("plugin.enable");
         
         // 初始化宠物工具类
         petUtils = new PetUtils(this);
@@ -80,9 +83,17 @@ public final class MinePal extends JavaPlugin implements Listener {
         
         // 使用延迟任务确保MythicMobs完全加载
         Bukkit.getScheduler().runTaskLater(this, () -> {
-            getLogger().info("开始延迟初始化AI系统...");
+            // 清理可能存在的无主宠物（服务器崩溃后残留的宠物）
+            String cleanupMessage = messageManager.getMessage("plugin.pet-cleanup");
+            console.sendMessage(ChatColor.translateAlternateColorCodes('&', cleanupMessage));
+            
+            petManager.removeAllPets();
+            
+            String completeMessage = messageManager.getMessage("plugin.pet-cleanup-complete");
+            console.sendMessage(ChatColor.translateAlternateColorCodes('&', completeMessage));
+            
+            // 初始化AI系统
             aiManager.initialize();
-            getLogger().info("AI系统初始化完成！");
             
             // 注册宠物生命周期监听器
             lifecycleListener = new PetLifecycleListener(this);
@@ -92,20 +103,12 @@ public final class MinePal extends JavaPlugin implements Listener {
             updateCommandHandler();
         }, 40L); // 2秒后执行
         
-        // 注册定时任务，定期清理过期的战斗状态数据
-        getServer().getScheduler().runTaskTimer(this, () -> {
-            if (combatListener != null) {
-                combatListener.cleanupCombatData();
-            }
-        }, 100L, 100L); // 每5秒清理一次
-        
         // 注册事件监听器
         getServer().getPluginManager().registerEvents(new EntityDamageListener(this), this);
         
         // 插件启动逻辑
-        getLogger().info(messageManager.getMessage("plugin.enable"));
-        
-        messageManager.debug("plugin.enable-complete");
+        String enableMessage = messageManager.getMessage("plugin.enable");
+        console.sendMessage(ChatColor.GREEN + ChatColor.translateAlternateColorCodes('&', enableMessage));
     }
     
     /**
@@ -113,13 +116,6 @@ public final class MinePal extends JavaPlugin implements Listener {
      */
     @EventHandler
     public void onMythicReload(MythicReloadedEvent event) {
-        // 检查是否开启调试模式
-        if (configManager.isDebug()) {
-            getLogger().info("[DEBUG] 检测到MythicMobs重载，重新初始化系统...");
-        } else {
-            getLogger().info("检测到MythicMobs重载，重新初始化系统...");
-        }
-        
         // 重载配置
         configManager.reloadAllConfigs();
         
@@ -135,12 +131,6 @@ public final class MinePal extends JavaPlugin implements Listener {
         if (petManager != null) {
             petManager.removeAllPets();
         }
-        
-        if (configManager.isDebug()) {
-            getLogger().info("[DEBUG] 系统重新初始化完成！");
-        } else {
-            getLogger().info("系统重新初始化完成！");
-        }
     }
     
     /**
@@ -154,22 +144,33 @@ public final class MinePal extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        // 输出调试信息
-        messageManager.debug("plugin.disable");
-        
-        // 优先清理所有宠物实体（确保在服务器关闭时执行）
-        if (petManager != null) {
-            messageManager.debug("plugin.pet-cleanup-start");
-            getLogger().info(messageManager.getMessage("plugin.pet-cleanup"));
-            petManager.removeAllPets();
-            getLogger().info(messageManager.getMessage("plugin.pet-cleanup-complete"));
-            messageManager.debug("plugin.pet-cleanup-complete");
+        try {
+            // 检查messageManager是否为null
+            if (messageManager == null) {
+                // 如果messageManager为null，直接使用控制台发送固定信息
+                console = getServer().getConsoleSender();
+                console.sendMessage(ChatColor.YELLOW + "[MinePal] " + ChatColor.RED + "插件已禁用");
+                return;
+            }
+            
+            // 优先清理所有宠物实体（确保在服务器关闭时执行）
+            if (petManager != null) {
+                String cleanupMessage = messageManager.getMessage("plugin.pet-cleanup");
+                console.sendMessage(ChatColor.translateAlternateColorCodes('&', cleanupMessage));
+                
+                petManager.removeAllPets();
+                
+                String completeMessage = messageManager.getMessage("plugin.pet-cleanup-complete");
+                console.sendMessage(ChatColor.translateAlternateColorCodes('&', completeMessage));
+            }
+            
+            // 插件关闭逻辑
+            String disableMessage = messageManager.getMessage("plugin.disable");
+            console.sendMessage(ChatColor.RED + ChatColor.translateAlternateColorCodes('&', disableMessage));
+        } catch (Exception e) {
+            // 捕获任何可能的异常，确保插件可以正常关闭
+            getLogger().severe("插件禁用过程中发生错误: " + e.getMessage());
         }
-        
-        // 插件关闭逻辑
-        getLogger().info(messageManager.getMessage("plugin.disable"));
-        
-        messageManager.debug("plugin.disable-complete");
     }
     
     /**

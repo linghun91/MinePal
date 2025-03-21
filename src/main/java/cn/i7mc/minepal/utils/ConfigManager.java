@@ -23,7 +23,6 @@ public class ConfigManager {
     public void loadAllConfigs() {
         loadConfig("config.yml");
         loadConfig("message.yml");
-        loadConfig("debugmessage.yml");
     }
 
     /**
@@ -31,6 +30,11 @@ public class ConfigManager {
      * @param filename 配置文件名
      */
     public void loadConfig(String filename) {
+        // 跳过debugmessage.yml文件
+        if (filename.equals("debugmessage.yml")) {
+            return;
+        }
+        
         File file = new File(plugin.getDataFolder(), filename);
         if (!file.exists()) {
             plugin.saveResource(filename, false);
@@ -53,14 +57,7 @@ public class ConfigManager {
             File file = new File(plugin.getDataFolder(), filename);
             configs.get(filename).save(file);
         } catch (IOException e) {
-            if (plugin.getMessageManager() != null) {
-                plugin.getMessageManager().debug("config.save-error", "filename", filename);
-            } else {
-                plugin.getLogger().severe("无法保存配置文件: " + filename);
-            }
-            if (isDebug()) {
-                e.printStackTrace();
-            }
+            plugin.getLogger().severe("无法保存配置文件: " + filename);
         }
     }
 
@@ -78,8 +75,8 @@ public class ConfigManager {
      * @return 是否启用调试模式
      */
     public boolean isDebug() {
-        FileConfiguration config = getConfig("config.yml");
-        return config != null && config.getBoolean("debug", false);
+        // 保留方法定义，但始终返回false
+        return false;
     }
 
     /**

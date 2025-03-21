@@ -66,22 +66,12 @@ public class EntityDamageListener implements Listener {
         // 情况1：宠物被主人攻击
         if (damagedOwner != null && damager instanceof Player && damager.equals(damagedOwner)) {
             event.setCancelled(true);
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("damage.owner-attacked-pet", 
-                    "owner", damagedOwner.getName(),
-                    "pet", damaged.getType().name());
-            }
             return;
         }
 
         // 情况2：宠物攻击主人
         if (damagerOwner != null && damaged instanceof Player && damaged.equals(damagerOwner)) {
             event.setCancelled(true);
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("damage.pet-attacked-owner", 
-                    "owner", damaged.getName(),
-                    "pet", damager.getType().name());
-            }
             
             // 尝试重置宠物的目标
             EntityUtils.setTarget(damager, null);
@@ -96,10 +86,6 @@ public class EntityDamageListener implements Listener {
         // 如果攻击者和受伤者都是宠物，且拥有同一个主人
         if (damagedOwner != null && damagerOwner != null && damagedOwner.equals(damagerOwner)) {
             event.setCancelled(true);
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("damage.same-owner-pets", 
-                    "owner", damagedOwner.getName());
-            }
         }
     }
 } 

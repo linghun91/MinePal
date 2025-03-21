@@ -12,7 +12,6 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
 import java.lang.ref.WeakReference;
-import java.util.UUID;
 
 /**
  * 自定义的跟随主人AI行为，适用于所有类型的实体

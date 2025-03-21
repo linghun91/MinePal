@@ -42,11 +42,6 @@ public class PetUtils {
         }
         
         playerPets.put(player.getUniqueId(), pet.getUniqueId());
-        
-        // 如果开启调试模式，输出调试信息
-        if (plugin.getConfigManager().isDebug()) {
-            plugin.getLogger().info("[DEBUG] 注册宠物：玩家=" + player.getName() + ", 宠物UUID=" + pet.getUniqueId());
-        }
     }
     
     /**
@@ -65,11 +60,6 @@ public class PetUtils {
      */
     public void unregisterPet(Player player) {
         playerPets.remove(player.getUniqueId());
-        
-        // 如果开启调试模式，输出调试信息
-        if (plugin.getConfigManager().isDebug()) {
-            plugin.getLogger().info("[DEBUG] 注销宠物：玩家=" + player.getName());
-        }
     }
     
     /**
@@ -114,11 +104,6 @@ public class PetUtils {
      */
     public void clearAllPets() {
         playerPets.clear();
-        
-        // 如果开启调试模式，输出调试信息
-        if (plugin.getConfigManager().isDebug()) {
-            plugin.getLogger().info("[DEBUG] 已清空所有宠物注册信息");
-        }
     }
     
     /**

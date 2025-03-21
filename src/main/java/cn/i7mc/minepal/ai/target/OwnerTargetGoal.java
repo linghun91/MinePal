@@ -16,7 +16,6 @@ import org.bukkit.entity.Player;
 
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -65,7 +64,7 @@ public class OwnerTargetGoal extends Pathfinder implements PathfindingTarget {
         // 检查实体类型是否支持
         Entity bukkitEntity = BukkitAdapter.adapt(entity);
         if (!SUPPORTED_TYPES.contains(bukkitEntity.getType())) {
-            Bukkit.getLogger().warning("[MinePal] 警告: 实体类型 " + bukkitEntity.getType() + " 可能不支持OwnerTargetGoal, 尝试使用MythicMobs的内置目标选择器替代");
+            // 删除调试日志
         }
     }
 
@@ -95,10 +94,6 @@ public class OwnerTargetGoal extends Pathfinder implements PathfindingTarget {
         // 获取主人的目标
         LivingEntity ownerTarget = getPlayerTarget(ownerPlayer);
         if (ownerTarget == null) {
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("ai.pet-no-target", 
-                    "pet_uuid", entity.getUniqueId().toString());
-            }
             return false;
         }
         
@@ -111,14 +106,6 @@ public class OwnerTargetGoal extends Pathfinder implements PathfindingTarget {
         // 检查目标是否在范围内
         double distanceSq = this.entity.getLocation().distanceSquared(BukkitAdapter.adapt(ownerTarget.getLocation()));
         boolean inRange = distanceSq <= this.radiusSq;
-        
-        // 记录调试信息
-        if (inRange && plugin.getConfigManager().isDebug()) {
-            plugin.getMessageManager().debug("ai.target-found", 
-                "target", ownerTarget.getType().toString(),
-                "target_uuid", ownerTarget.getUniqueId().toString(),
-                "target_distance", String.format("%.2f", Math.sqrt(distanceSq)));
-        }
         
         return inRange;
     }
@@ -133,7 +120,6 @@ public class OwnerTargetGoal extends Pathfinder implements PathfindingTarget {
         if (ownerTarget != null) {
             Entity bukkitEntity = BukkitAdapter.adapt(this.entity);
             if (bukkitEntity instanceof Mob) {
-                Bukkit.getLogger().info("宠物开始攻击主人的目标: " + ownerTarget.getType());
                 ((Mob) bukkitEntity).setTarget(ownerTarget);
             }
         }
@@ -190,7 +176,7 @@ public class OwnerTargetGoal extends Pathfinder implements PathfindingTarget {
                 
                 // 如果当前目标不是主人的目标，更新目标
                 if (currentTarget == null || !currentTarget.equals(ownerTarget)) {
-                    Bukkit.getLogger().info("宠物更新目标: " + ownerTarget.getType());
+                    // 删除调试日志
                     mob.setTarget(ownerTarget);
                 }
             }
@@ -216,24 +202,24 @@ public class OwnerTargetGoal extends Pathfinder implements PathfindingTarget {
             if (targetUUID != null) {
                 Entity targetEntity = Bukkit.getEntity(targetUUID);
                 if (targetEntity instanceof LivingEntity && !(targetEntity instanceof Player)) {
-                    Bukkit.getLogger().info("找到玩家(" + player.getName() + ")正在攻击的目标: " + targetEntity.getType() + ", UUID: " + targetUUID);
+                    // 删除调试日志
                     return (LivingEntity) targetEntity;
                 }
-            } else {
-                Bukkit.getLogger().info("未找到玩家(" + player.getName() + ")的目标记录");
             }
             
             // 尝试从攻击者获取
-            UUID attackerUUID = plugin.getCombatListener().getPlayerAttacker(player.getUniqueId());
-            if (attackerUUID != null) {
-                Entity attackerEntity = Bukkit.getEntity(attackerUUID);
-                if (attackerEntity instanceof LivingEntity && !(attackerEntity instanceof Player)) {
-                    Bukkit.getLogger().info("玩家(" + player.getName() + ")正在被攻击,以攻击者为目标: " + attackerEntity.getType() + ", UUID: " + attackerUUID);
-                    return (LivingEntity) attackerEntity;
+            if (this.revenge) {
+                UUID attackerUUID = plugin.getCombatListener().getPlayerAttacker(player.getUniqueId());
+                if (attackerUUID != null) {
+                    Entity attackerEntity = Bukkit.getEntity(attackerUUID);
+                    if (attackerEntity instanceof LivingEntity && !(attackerEntity instanceof Player)) {
+                        // 删除调试日志
+                        return (LivingEntity) attackerEntity;
+                    }
                 }
             }
         } catch(Exception e) {
-            Bukkit.getLogger().warning("从战斗监听器获取目标时出错: " + e.getMessage());
+            // 删除调试日志
         }
         
         // 如果没有找到目标,返回null

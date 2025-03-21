@@ -64,14 +64,6 @@ public class DamageUtils {
         // 检查伤害类型是否在保护列表中
         if (PROTECTED_DAMAGE_CAUSES.contains(event.getCause())) {
             event.setCancelled(true);
-            
-            // 输出调试信息
-            if (plugin.getConfigManager().isDebug()) {
-                messageManager.debug("damage.prevent", 
-                        "pet_type", entity.getType().name(),
-                        "cause", event.getCause().name(),
-                        "owner", owner.getName());
-            }
         }
         
         // 如果是实体攻击实体的情况，需要额外处理
@@ -96,13 +88,6 @@ public class DamageUtils {
             // 发送消息给主人
             owner.sendMessage(messageManager.getMessage("damage.prevent-owner-attack"));
             
-            // 输出调试信息
-            if (plugin.getConfigManager().isDebug()) {
-                messageManager.debug("damage.prevent-owner-attack", 
-                        "owner", owner.getName(),
-                        "pet", pet.getType().name());
-            }
-            
             return;
         }
         
@@ -111,14 +96,6 @@ public class DamageUtils {
             Player damagerOwner = EntityUtils.getPetOwner(damager);
             if (damagerOwner != null && damagerOwner.getUniqueId().equals(owner.getUniqueId())) {
                 event.setCancelled(true);
-                
-                // 输出调试信息
-                if (plugin.getConfigManager().isDebug()) {
-                    messageManager.debug("damage.prevent-same-owner-pet-attack", 
-                            "owner", owner.getName(),
-                            "pet1", pet.getType().name(),
-                            "pet2", damager.getType().name());
-                }
             }
         }
     }

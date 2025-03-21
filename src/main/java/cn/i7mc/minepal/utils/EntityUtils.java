@@ -9,10 +9,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.*;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.util.Vector;
 
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -32,9 +30,6 @@ public class EntityUtils {
      */
     public static void init(MinePal plugin) {
         EntityUtils.plugin = plugin;
-        if (plugin.getConfigManager().isDebug()) {
-            plugin.getMessageManager().debug("entity.utils.init");
-        }
     }
 
     /**
@@ -63,7 +58,23 @@ public class EntityUtils {
             return ((Tameable) entity).isTamed();
         }
         
-        // 对于其他类型的实体，需要根据具体情况判断
+        // 检查是否是我们插件的MythicMobs宠物（根据元数据）
+        if (entity.hasMetadata("pet_owner") || entity.hasMetadata("owner")) {
+            return true;
+        }
+        
+        // 通过MythicMobs API检查是否是我们注册的宠物
+        if (MythicBukkit.inst() != null) {
+            try {
+                Optional<ActiveMob> mob = MythicBukkit.inst().getMobManager().getActiveMob(entity.getUniqueId());
+                if (mob.isPresent() && mob.get().getOwner() != null && mob.get().getOwner().isPresent()) {
+                    return true;
+                }
+            } catch (Exception e) {
+                // 忽略异常并继续检查
+            }
+        }
+        
         return false;
     }
     
@@ -85,7 +96,29 @@ public class EntityUtils {
             }
         }
         
-        // 自定义宠物逻辑（如果有）
+        // 通过元数据获取主人UUID
+        if (entity.hasMetadata("pet_owner")) {
+            String ownerUUID = entity.getMetadata("pet_owner").get(0).asString();
+            return Bukkit.getPlayer(UUID.fromString(ownerUUID));
+        }
+        
+        if (entity.hasMetadata("owner")) {
+            String ownerUUID = entity.getMetadata("owner").get(0).asString();
+            return Bukkit.getPlayer(UUID.fromString(ownerUUID));
+        }
+        
+        // 通过MythicMobs API获取主人
+        if (MythicBukkit.inst() != null) {
+            try {
+                Optional<ActiveMob> mob = MythicBukkit.inst().getMobManager().getActiveMob(entity.getUniqueId());
+                if (mob.isPresent() && mob.get().getOwner() != null && mob.get().getOwner().isPresent()) {
+                    return Bukkit.getPlayer(mob.get().getOwner().get());
+                }
+            } catch (Exception e) {
+                // 忽略异常并继续检查
+            }
+        }
+        
         return null;
     }
     
@@ -103,10 +136,6 @@ public class EntityUtils {
         if (entity instanceof Tameable) {
             Tameable tameable = (Tameable) entity;
             if (tameable.isTamed() && tameable.getOwner() != null) {
-                if (plugin.getConfigManager().isDebug()) {
-                    plugin.getMessageManager().debug("entity.get-owner", 
-                            "entity_type", entity.getType().toString());
-                }
                 return Optional.of(tameable.getOwner());
             }
         }
@@ -146,9 +175,6 @@ public class EntityUtils {
         if (entity instanceof Sittable) {
             Sittable sittable = (Sittable) entity;
             sittable.setSitting(sitting);
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("entity.set-sitting", String.valueOf(sitting));
-            }
             return true;
         }
         
@@ -168,12 +194,6 @@ public class EntityUtils {
         
         Mob mob = (Mob) entity;
         mob.setTarget(target);
-        
-        if (plugin.getConfigManager().isDebug()) {
-            plugin.getMessageManager().debug("entity.set-target", 
-                    "pet_type", entity.getType().toString(),
-                    "target_type", target != null ? target.getType().toString() : "null");
-        }
         
         return true;
     }
@@ -198,17 +218,8 @@ public class EntityUtils {
                 am.resetTarget();
             }
             
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("entity.set-mythic-target", 
-                        "pet_type", pet.getType().toString(),
-                        "target_type", target != null ? target.getType().toString() : "null");
-            }
-            
             return true;
         } catch (Exception e) {
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getLogger().warning("设置MythicMobs目标时出错: " + e.getMessage());
-            }
             return false;
         }
     }
@@ -225,32 +236,24 @@ public class EntityUtils {
     }
     
     /**
-     * 检查实体是否在战斗状态
-     * 
-     * @param entity 实体
-     * @return 是否在战斗
+     * 检查实体是否处于战斗状态
+     * @param entity 要检查的实体
+     * @return 是否处于战斗状态
      */
     public static boolean isInCombat(Entity entity) {
-        if (entity == null) {
-            return false;
-        }
+        if (entity == null) return false;
         
         // 这里应该根据插件的战斗状态管理逻辑来判断
         if (entity instanceof Player) {
-            return plugin.getOwnerCombatListener().isInCombat((Player) entity);
+            return plugin.getOwnerCombatListener().isPlayerInCombat(entity.getUniqueId());
         }
         
         // 如果是宠物，检查其主人是否处于战斗状态
         Player owner = getPetOwner(entity);
         if (owner != null) {
-            return plugin.getOwnerCombatListener().isInCombat(owner);
+            return plugin.getOwnerCombatListener().isPlayerInCombat(owner.getUniqueId());
         }
         
-        if (plugin.getConfigManager().isDebug()) {
-            plugin.getMessageManager().debug("entity.check-combat");
-        }
-        
-        // 返回基于战斗逻辑的结果
         return false;
     }
     
@@ -268,12 +271,6 @@ public class EntityUtils {
             
             return pet.teleport(owner.getLocation());
         } catch (Exception e) {
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("entity.teleport-error", 
-                        "pet_type", pet.getType().toString(),
-                        "owner", owner.getName(),
-                        "error", e.getMessage());
-            }
             return false;
         }
     }
@@ -430,9 +427,8 @@ public class EntityUtils {
                     return displayName;
                 }
             } catch (Exception e) {
-                if (plugin.getConfigManager().isDebug()) {
-                    plugin.getLogger().warning("获取宠物显示名称时出错: " + e.getMessage());
-                }
+                // 默认使用实体类型名称
+                return pet.getType().toString();
             }
         }
         
@@ -470,18 +466,12 @@ public class EntityUtils {
      */
     public static boolean teleportPet(Entity pet, Location location) {
         if (pet == null || location == null) {
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("entity.teleport-error", "pet_or_location_null");
-            }
             return false;
         }
         
         try {
             return pet.teleport(location);
         } catch (Exception e) {
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("entity.teleport-error", e.getMessage());
-            }
             return false;
         }
     }
@@ -498,12 +488,6 @@ public class EntityUtils {
         Collection<Entity> enemies = nearbyEntities.stream()
                 .filter(entity -> entity instanceof Monster || entity instanceof Phantom || entity instanceof Hoglin)
                 .collect(Collectors.toList());
-        
-        if (plugin.getConfigManager().isDebug()) {
-            plugin.getMessageManager().debug("entity.find-enemy", 
-                    "radius", String.valueOf(radius),
-                    "found", String.valueOf(enemies.size()));
-        }
         
         return enemies;
     }
@@ -525,12 +509,6 @@ public class EntityUtils {
         
         petLoc.setYaw(yaw);
         pet.teleport(petLoc);
-        
-        if (plugin.getConfigManager().isDebug()) {
-            plugin.getMessageManager().debug("entity.look-at", 
-                    "pet_type", pet.getType().toString(),
-                    "location", location.getBlockX() + "," + location.getBlockY() + "," + location.getBlockZ());
-        }
     }
 
     /**
@@ -562,9 +540,8 @@ public class EntityUtils {
                     }
                 }
             } catch (Exception e) {
-                if (plugin.getConfigManager().isDebug()) {
-                    plugin.getLogger().warning("获取宠物显示名称时出错: " + e.getMessage());
-                }
+                // 默认使用实体类型名称
+                return entity.getType().toString();
             }
         }
         

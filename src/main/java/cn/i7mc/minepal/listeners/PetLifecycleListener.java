@@ -2,7 +2,6 @@ package cn.i7mc.minepal.listeners;
 
 import cn.i7mc.minepal.MinePal;
 import cn.i7mc.minepal.pet.control.PetManager;
-import io.lumine.mythic.bukkit.BukkitAdapter;
 import io.lumine.mythic.bukkit.MythicBukkit;
 import io.lumine.mythic.bukkit.utils.serialize.Optl;
 import io.lumine.mythic.core.mobs.ActiveMob;
@@ -15,7 +14,6 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
-import org.bukkit.event.world.WorldUnloadEvent;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -43,18 +41,8 @@ public class PetLifecycleListener implements Listener {
         
         // 检查玩家是否有宠物
         if (petManager != null && plugin.getPetUtils().hasPet(player)) {
-            // 输出调试信息
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("pet.player-quit", "player_name", player.getName());
-            }
-            
             // 移除玩家的宠物
             petManager.removePet(player);
-            
-            // 输出调试信息
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("pet.player-quit-complete", "player_name", player.getName());
-            }
         }
     }
     
@@ -80,22 +68,6 @@ public class PetLifecycleListener implements Listener {
         // 确认是宠物
         UUID petUUID = plugin.getPetUtils().getPetUUID(owner);
         if (petUUID == null || !petUUID.equals(entity.getUniqueId())) return;
-        
-        // 输出调试信息
-        if (plugin.getConfigManager().isDebug()) {
-            plugin.getMessageManager().debug("pet.death-info", 
-                "pet_type", entity.getType().toString(),
-                "killer", event.getEntity().getKiller() != null ? event.getEntity().getKiller().getName() : "未知",
-                "owner", owner.getName(),
-                "pet_location", String.format("%.2f, %.2f, %.2f", 
-                    entity.getLocation().getX(), 
-                    entity.getLocation().getY(), 
-                    entity.getLocation().getZ()),
-                "owner_location", String.format("%.2f, %.2f, %.2f", 
-                    owner.getLocation().getX(), 
-                    owner.getLocation().getY(), 
-                    owner.getLocation().getZ()));
-        }
         
         // 从注册表中移除宠物
         plugin.getPetUtils().unregisterPet(owner);
@@ -129,24 +101,6 @@ public class PetLifecycleListener implements Listener {
         }
         
         if (petEntity == null) return;
-        
-        // 输出调试信息
-        if (plugin.getConfigManager().isDebug()) {
-            plugin.getMessageManager().debug("pet.teleport-info",
-                "player", player.getName(),
-                "from_location", String.format("%.2f, %.2f, %.2f", 
-                    event.getFrom().getX(), 
-                    event.getFrom().getY(), 
-                    event.getFrom().getZ()),
-                "to_location", String.format("%.2f, %.2f, %.2f", 
-                    event.getTo().getX(), 
-                    event.getTo().getY(), 
-                    event.getTo().getZ()),
-                "pet_location", String.format("%.2f, %.2f, %.2f", 
-                    petEntity.getLocation().getX(), 
-                    petEntity.getLocation().getY(), 
-                    petEntity.getLocation().getZ()));
-        }
     }
     
     /**
@@ -159,14 +113,6 @@ public class PetLifecycleListener implements Listener {
         
         // 检查玩家是否有宠物
         if (!plugin.getPetUtils().hasPet(player)) return;
-        
-        // 输出调试信息
-        if (plugin.getConfigManager().isDebug()) {
-            plugin.getMessageManager().debug("pet.world-change",
-                "player", player.getName(),
-                "from_world", event.getFrom().getName(),
-                "to_world", player.getWorld().getName());
-        }
         
         // 获取宠物信息，如果宠物在之前的世界，需要移除并在新世界重新召唤
         UUID petUUID = plugin.getPetUtils().getPetUUID(player);
@@ -183,9 +129,6 @@ public class PetLifecycleListener implements Listener {
         
         if (petEntity != null) {
             // 宠物在之前的世界，需要移除并在新世界重新召唤
-            if (plugin.getConfigManager().isDebug()) {
-                plugin.getMessageManager().debug("pet.world-change-remount");
-            }
             
             // 获取宠物信息
             ActiveMob activeMob = MythicBukkit.inst().getMobManager().getActiveMob(petUUID).orElse(null);
@@ -200,11 +143,6 @@ public class PetLifecycleListener implements Listener {
             // 延迟一点时间后在新世界召唤宠物
             plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
                 petManager.summonPet(player, mobType);
-                
-                if (plugin.getConfigManager().isDebug()) {
-                    plugin.getMessageManager().debug("pet.world-change-summon",
-                        "mob_type", mobType);
-                }
             }, 10L);
         }
     }
@@ -221,13 +159,6 @@ public class PetLifecycleListener implements Listener {
         // 检查玩家是否有宠物
         if (!plugin.getPetUtils().hasPet(player)) return;
         
-        // 输出调试信息
-        if (plugin.getConfigManager().isDebug()) {
-            plugin.getMessageManager().debug("pet.owner-death", 
-                "owner", player.getName(),
-                "pet_uuid", plugin.getPetUtils().getPetUUID(player).toString());
-        }
-        
         // 移除玩家的宠物
         petManager.removePet(player);
     }
@@ -240,103 +171,38 @@ public class PetLifecycleListener implements Listener {
     public void onWorldUnload(org.bukkit.event.world.WorldUnloadEvent event) {
         if (event.getWorld() == null) return;
         
-        // 输出调试信息
-        if (plugin.getConfigManager().isDebug()) {
-            plugin.getMessageManager().debug("pet.world-unload", "world_name", event.getWorld().getName());
-        }
-        
         // 检查该世界中所有可能的宠物实体并清理
         for (Entity entity : event.getWorld().getEntities()) {
             // 检查是否为宠物
             if (isPotentialPet(entity)) {
-                // 输出调试信息
-                if (plugin.getConfigManager().isDebug()) {
-                    plugin.getMessageManager().debug("pet.world-unload-cleanup",
-                            new String[]{"%entity_type%", "%entity_uuid%", "%world%"},
-                            new String[]{entity.getType().toString(), entity.getUniqueId().toString(), event.getWorld().getName()});
-                }
-                
                 try {
-                    // 尝试通过MythicMobs清理
-                    Optional<ActiveMob> activeMob = MythicBukkit.inst().getMobManager().getActiveMob(entity.getUniqueId());
-                    if (activeMob.isPresent()) {
-                        // 检查是否有主人
-                        Optl<UUID> ownerUUID = activeMob.get().getOwner();
-                        if (ownerUUID.isPresent()) {
-                            Player owner = plugin.getServer().getPlayer(ownerUUID.get());
-                            if (owner != null) {
-                                // 如果主人在线，使用标准方法移除宠物
-                                petManager.removePet(owner);
-                                continue;
-                            }
-                        }
+                    // 获取宠物的主人
+                    Player owner = plugin.getPetUtils().getOwnerByPet(entity);
+                    if (owner != null) {
+                        // 移除宠物的登记信息
+                        plugin.getPetUtils().unregisterPet(owner);
                         
-                        // 如果未能通过标准方法移除，则直接移除实体
-                        if (petManager.getAIManager() != null) {
-                            petManager.getAIManager().removeAI(activeMob.get());
-                        }
-                        activeMob.get().remove();
-                    } else {
-                        // 直接移除实体
+                        // 从世界中移除实体
                         entity.remove();
                     }
                 } catch (Exception e) {
-                    // 出错时直接移除实体
-                    entity.remove();
-                    
-                    if (plugin.getConfigManager().isDebug()) {
-                        plugin.getLogger().warning("清理世界卸载时的宠物实体时出错: " + e.getMessage());
-                    }
+                    // 处理可能的错误
                 }
             }
         }
     }
     
     /**
-     * 判断一个实体是否可能是宠物
+     * 检查实体是否为潜在的宠物
      * @param entity 要检查的实体
      * @return 是否可能是宠物
      */
     private boolean isPotentialPet(Entity entity) {
-        if (entity == null) return false;
-        
-        // 检查实体的元数据
-        if (entity.hasMetadata("owner") || entity.hasMetadata("pet")) {
-            return true;
+        // 检查是否为 MythicMob
+        if (MythicBukkit.inst().getMobManager().isActiveMob(entity.getUniqueId())) {
+            ActiveMob mob = MythicBukkit.inst().getMobManager().getActiveMob(entity.getUniqueId()).orElse(null);
+            return mob != null && mob.getOwner().isPresent();
         }
-        
-        // 检查是否在PetUtils中注册过
-        if (plugin.getPetUtils().isPetEntity(entity)) {
-            return true;
-        }
-        
-        // 检查实体类型是否通常作为宠物
-        if (entity instanceof org.bukkit.entity.Tameable) {
-            org.bukkit.entity.Tameable tameable = (org.bukkit.entity.Tameable) entity;
-            if (tameable.isTamed()) {
-                return true;
-            }
-        }
-        
-        // 检查MythicMobs标记
-        try {
-            ActiveMob activeMob = MythicBukkit.inst().getMobManager().getActiveMob(entity.getUniqueId()).orElse(null);
-            if (activeMob != null) {
-                // 检查MythicMobs标记或名称是否表明这是一个宠物
-                String mobType = activeMob.getType().getInternalName();
-                Optl<UUID> owner = activeMob.getOwner();
-                
-                if (owner.isPresent()) {
-                    return true;
-                }
-                
-                return mobType != null && (mobType.toLowerCase().contains("pet") || 
-                        (entity.getCustomName() != null && entity.getCustomName().contains("的")));
-            }
-        } catch (Exception ignored) {
-            // 如果获取MythicMobs实体失败，忽略
-        }
-        
         return false;
     }
 } 
